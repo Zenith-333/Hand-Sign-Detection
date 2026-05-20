@@ -31,12 +31,42 @@ except Exception as e:
 
 # ── Friendly Labels ────────────────────────────────────────────────────────────
 friendly_labels = {
+    "brother": "Brother sign",
+    "call": "Call sign",
+    "daughter": "Daughter sign",
+    "father": "Father sign",
+    "food": "Food sign",
+    "good": "Good sign",
+    "grand": "Grand gesture",
+    "hello": "Hello sign",
+    "here": "Here sign",
+    "how": "How sign",
     "iloveyou": "I Love You sign",
     "love": "Love sign",
-    "grand": "Grand gesture",
+    "morning": "Morning sign",
+    "mother": "Mother sign",
+    "night": "Night sign",
+    "no": "No sign",
+    "nothing": "Nothing sign",
+    "one": "One sign",
+    "peace": "Peace sign",
+    "ready": "Ready sign",
+    "run": "Run sign",
+    "sister": "Sister sign",
+    "small": "Small sign",
+    "son": "Son sign",
+    "sorry": "Sorry sign",
+    "stop": "Stop sign",
+    "thank you": "Thank You sign",
+    "what": "What sign",
     "when": "When sign",
-    # add more mappings based on your dataset.yaml
+    "where": "Where sign",
+    "which": "Which sign",
+    "who": "Who sign",
+    "why": "Why sign",
+    "you": "You sign"
 }
+
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Settings")
