@@ -29,47 +29,8 @@ except Exception as e:
     st.error(f"Failed to load model: {e}")
     st.stop()
 
-# ── Friendly Labels ────────────────────────────────────────────────────────────
-friendly_labels = {
-    "brother": "Brother sign",
-    "call": "Call sign",
-    "daughter": "Daughter sign",
-    "father": "Father sign",
-    "food": "Food sign",
-    "good": "Good sign",
-    "grand": "Grand gesture",
-    "hello": "Hello sign",
-    "here": "Here sign",
-    "how": "How sign",
-    "iloveyou": "I Love You sign",
-    "love": "Love sign",
-    "morning": "Morning sign",
-    "mother": "Mother sign",
-    "night": "Night sign",
-    "no": "No sign",
-    "nothing": "Nothing sign",
-    "one": "One sign",
-    "peace": "Peace sign",
-    "ready": "Ready sign",
-    "run": "Run sign",
-    "sister": "Sister sign",
-    "small": "Small sign",
-    "son": "Son sign",
-    "sorry": "Sorry sign",
-    "stop": "Stop sign",
-    "thank you": "Thank You sign",
-    "what": "What sign",
-    "when": "When sign",
-    "where": "Where sign",
-    "which": "Which sign",
-    "who": "Who sign",
-    "why": "Why sign",
-    "you": "You sign"
-}
-
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Settings")
-# FIX 2: Changed default confidence from 0.15 → 0.25 to reduce false positives
 confidence = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.25, 0.05)
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Gesture Classes:**")
@@ -80,35 +41,16 @@ mode = st.radio("Select Input Mode", ["📷 Image", "🎥 Video", "📸 Webcam"]
 st.markdown("---")
 
 # ── Helper ─────────────────────────────────────────────────────────────────────
-# FIX 1: Added `is_bgr` parameter.
-#   - PIL images (from file uploader & camera) are already RGB → is_bgr=False (default)
-#   - OpenCV video frames are BGR → is_bgr=True
-# The original code blindly ran cv2.COLOR_BGR2RGB on every numpy array, which
-# double-converted PIL-sourced images (RGB → wrong colors), causing bad predictions.
-def run_detection(source, conf, is_bgr=False):
-    if is_bgr and isinstance(source, np.ndarray):
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-
-    try:
-        results = model.predict(source=source, conf=conf, verbose=False, device="cuda")
-    except Exception:
-        results = model.predict(source=source, conf=conf, verbose=False, device="cpu")
-
+def run_detection(source, conf):
+    results = model.predict(source=source, conf=conf, verbose=False)
     result = results[0]
     annotated = result.plot()
     annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-
     detections = []
     for box in result.boxes:
         cls_name = class_names[int(box.cls[0])]
         conf_score = float(box.conf[0])
-        # FIX 3: Normalize class name before looking up friendly label.
-        # model.names may return "thank_you" or "Thank_You"; normalize to match
-        # the lowercase-with-spaces keys in friendly_labels.
-        normalized = cls_name.lower().replace("_", " ")
-        readable_label = friendly_labels.get(normalized, cls_name)
-        detections.append((readable_label, conf_score))
-
+        detections.append((cls_name, conf_score))
     return annotated_rgb, detections
 
 # ── IMAGE MODE ─────────────────────────────────────────────────────────────────
@@ -116,7 +58,7 @@ if mode == "📷 Image":
     uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
     if uploaded_file:
         image = Image.open(uploaded_file).convert("RGB")
-        img_array = np.array(image)  # This is already RGB from PIL
+        img_array = np.array(image)
 
         col1, col2 = st.columns(2)
         with col1:
@@ -125,8 +67,7 @@ if mode == "📷 Image":
         with col2:
             st.subheader("Detection Result")
             with st.spinner("Detecting..."):
-                # is_bgr=False because PIL gives us RGB
-                annotated, detections = run_detection(img_array, confidence, is_bgr=False)
+                annotated, detections = run_detection(img_array, confidence)
             st.image(annotated, use_container_width=True)
 
         st.subheader("📋 Detected Hand Signs")
@@ -167,8 +108,7 @@ elif mode == "🎥 Video":
             ret, frame = cap.read()
             if not ret:
                 break
-            # is_bgr=True because OpenCV cap.read() returns BGR frames
-            annotated, detections = run_detection(frame, confidence, is_bgr=True)
+            annotated, detections = run_detection(frame, confidence)
             writer.write(cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
             for cls_name, _ in detections:
                 detection_counts[cls_name] = detection_counts.get(cls_name, 0) + 1
@@ -199,7 +139,7 @@ elif mode == "📸 Webcam":
     img_file = st.camera_input("Take a photo")
     if img_file:
         image = Image.open(img_file).convert("RGB")
-        img_array = np.array(image)  # Already RGB from PIL
+        img_array = np.array(image)
 
         col1, col2 = st.columns(2)
         with col1:
@@ -208,8 +148,7 @@ elif mode == "📸 Webcam":
         with col2:
             st.subheader("Detection Result")
             with st.spinner("Detecting..."):
-                # is_bgr=False because PIL gives us RGB
-                annotated, detections = run_detection(img_array, confidence, is_bgr=False)
+                annotated, detections = run_detection(img_array, confidence)
             st.image(annotated, use_container_width=True)
 
         st.subheader("📋 Detected Hand Signs")
