@@ -59,31 +59,34 @@ def detect(frame_bgr):
 
 # ── Mode: Webcam ─────────────────────────────────────────────
 if mode == "📷 Webcam (Real-time)":
-    st.info("📸 Tick **Start Webcam** below. Show your hand and hold up 1–5 fingers!")
+    st.warning("⚠️ Webcam access is not supported on Streamlit Cloud. Please run the app locally for live webcam detection, or use the Image/Video upload modes.")
 
-    run = st.checkbox("▶ Start Webcam")
+    run = st.checkbox("▶ Start Webcam (local only)")
     FRAME_WINDOW = st.image([])
     detection_placeholder = st.empty()
 
-    cap = cv2.VideoCapture(0)
-
-    while run:
-        ret, frame = cap.read()
-        if not ret:
-            st.error("Cannot access webcam.")
-            break
-
-        annotated, detections = detect(frame)
-        annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-        FRAME_WINDOW.image(annotated_rgb, channels="RGB", use_column_width=True)
-
-        if detections:
-            det_text = " | ".join([f"**{lbl}** ({conf:.0%})" for lbl, conf in detections])
-            detection_placeholder.markdown(f"🟢 Detected: {det_text}")
+    if run:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            st.error("❌ Cannot access webcam. This feature only works when running locally.")
         else:
-            detection_placeholder.markdown("🔴 No gesture detected")
+            while run:
+                ret, frame = cap.read()
+                if not ret:
+                    st.error("Cannot read from webcam.")
+                    break
 
-    cap.release()
+                annotated, detections = detect(frame)
+                annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+                FRAME_WINDOW.image(annotated_rgb, channels="RGB", use_container_width=True)
+
+                if detections:
+                    det_text = " | ".join([f"**{lbl}** ({conf:.0%})" for lbl, conf in detections])
+                    detection_placeholder.markdown(f"🟢 Detected: {det_text}")
+                else:
+                    detection_placeholder.markdown("🔴 No gesture detected")
+
+            cap.release()
 
 # ── Mode: Upload Image ────────────────────────────────────────
 elif mode == "🖼️ Upload Image":
@@ -97,10 +100,10 @@ elif mode == "🖼️ Upload Image":
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("**Original**")
-            st.image(img, use_column_width=True)
+            st.image(img, use_container_width=True)
         with col2:
             st.markdown("**Detected**")
-            st.image(annotated_rgb, use_column_width=True)
+            st.image(annotated_rgb, use_container_width=True)
 
         if detections:
             st.success("Detections:")
@@ -140,7 +143,7 @@ elif mode == "🎥 Upload Video":
 
             if frame_idx % 10 == 0:
                 rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-                FRAME_WINDOW.image(rgb, use_column_width=True)
+                FRAME_WINDOW.image(rgb, use_container_width=True)
                 progress.progress(min(frame_idx / max(total, 1), 1.0))
             frame_idx += 1
 
