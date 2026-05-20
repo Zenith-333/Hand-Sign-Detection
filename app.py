@@ -19,7 +19,7 @@ st.markdown("Detect hand gestures using a YOLOv8 model trained on sign language 
 # ── Load Model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    model_path = os.path.join(os.path.dirname(__file__), "best.pt")
+    model_path = os.path.join(os.path.dirname(__file__), "best.pt")  # ensure correct weights file
     return YOLO(model_path)
 
 try:
@@ -29,9 +29,18 @@ except Exception as e:
     st.error(f"Failed to load model: {e}")
     st.stop()
 
+# ── Friendly Labels ────────────────────────────────────────────────────────────
+friendly_labels = {
+    "iloveyou": "I Love You sign",
+    "love": "Love sign",
+    "grand": "Grand gesture",
+    "when": "When sign",
+    # add more mappings based on your dataset.yaml
+}
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 st.sidebar.header("⚙️ Settings")
-confidence = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.25, 0.05)
+confidence = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.15, 0.05)
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Gesture Classes:**")
 st.sidebar.markdown(", ".join(class_names.values()))
@@ -42,15 +51,27 @@ st.markdown("---")
 
 # ── Helper ─────────────────────────────────────────────────────────────────────
 def run_detection(source, conf):
-    results = model.predict(source=source, conf=conf, verbose=False)
+    # Ensure frames are in RGB (important for OpenCV video frames)
+    if isinstance(source, np.ndarray):
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+
+    # Run prediction with GPU/CPU fallback
+    try:
+        results = model.predict(source=source, conf=conf, verbose=False, device="cuda")
+    except Exception:
+        results = model.predict(source=source, conf=conf, verbose=False, device="cpu")
+
     result = results[0]
     annotated = result.plot()
     annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+
     detections = []
     for box in result.boxes:
         cls_name = class_names[int(box.cls[0])]
         conf_score = float(box.conf[0])
-        detections.append((cls_name, conf_score))
+        readable_label = friendly_labels.get(cls_name, cls_name)
+        detections.append((readable_label, conf_score))
+
     return annotated_rgb, detections
 
 # ── IMAGE MODE ─────────────────────────────────────────────────────────────────
