@@ -42,15 +42,26 @@ st.markdown("---")
 
 # ── Helper ─────────────────────────────────────────────────────────────────────
 def run_detection(source, conf):
-    results = model.predict(source=source, conf=conf, verbose=False)
+    # Ensure frames are in RGB (important for OpenCV video frames)
+    if isinstance(source, np.ndarray):
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+
+    # Run prediction with GPU/CPU fallback
+    try:
+        results = model.predict(source=source, conf=conf, verbose=False, device="cuda")
+    except Exception:
+        results = model.predict(source=source, conf=conf, verbose=False, device="cpu")
+
     result = results[0]
     annotated = result.plot()
     annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+
     detections = []
     for box in result.boxes:
         cls_name = class_names[int(box.cls[0])]
         conf_score = float(box.conf[0])
         detections.append((cls_name, conf_score))
+
     return annotated_rgb, detections
 
 # ── IMAGE MODE ─────────────────────────────────────────────────────────────────
