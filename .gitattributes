@@ -1,0 +1,4 @@
+* text=auto
+*.pt binary
+*.pth binary
+*.weights binary
